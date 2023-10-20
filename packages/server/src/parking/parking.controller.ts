@@ -1,34 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Patch, Param } from '@nestjs/common';
 import { ParkingService } from './parking.service';
-import { CreateParkingDto } from './dto/create-parking.dto';
-import { UpdateParkingDto } from './dto/update-parking.dto';
+import { AllocateParkingDto } from './dto/allocate-parking.dto';
 
 @Controller('parking')
 export class ParkingController {
   constructor(private readonly parkingService: ParkingService) {}
 
-  @Post()
-  create(@Body() createParkingDto: CreateParkingDto) {
-    return this.parkingService.create(createParkingDto);
+  @Post(':storeId/allocate-parking-slot')
+  allocateParkingSlot(
+    @Param('storeId') storeId: string,
+    @Body() allocateParkingDto: AllocateParkingDto,
+  ) {
+    return this.parkingService.allocateParkingSlot(storeId, allocateParkingDto);
   }
 
-  @Get()
-  findAll() {
-    return this.parkingService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.parkingService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateParkingDto: UpdateParkingDto) {
-    return this.parkingService.update(+id, updateParkingDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.parkingService.remove(+id);
+  @Patch(':storeId/:slotId')
+  update(@Param('storeId') storeId: string, @Param('slotId') slotId: string) {
+    return this.parkingService.releaseParkingSlot(storeId, slotId);
   }
 }
