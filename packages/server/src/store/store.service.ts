@@ -1,32 +1,93 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { CreateStoreDto } from './dto/create-store.dto';
-import { UpdateStoreDto } from './dto/update-store.dto';
-import { MODELS } from 'src/constants';
 import { Model } from 'mongoose';
-import { Store } from 'src/interfaces/store.interface';
+import { Store } from './interfaces/store.interface';
+import * as nanoid from 'nanoid';
+import * as _ from 'lodash';
+import {
+  LARGE_CAR_SIZE,
+  MEDIUM_CAR_SIZE,
+  PARKING_SLOT_SIZE,
+  SMALL_CAR_SIZE,
+  TOTAL_FLOORS,
+  XL_CAR_SIZE,
+} from 'src/constants';
+import { generateParkingLot } from './store.utils';
 
 @Injectable()
 export class StoreService {
-  
-  constructor(@Inject(MODELS.store) private storeModel: Model<Store>) {}
+  constructor(@Inject('STORE_MODEL') private storeModel: Model<Store>) {}
 
-  create(createStoreDto: CreateStoreDto) {
-    return 'This action adds a new store';
+  async create(createStoreDto: CreateStoreDto) {
+    const id = nanoid.nanoid();
+    const parkingLots = [];
+    const store = createStoreDto;
+    store.storeId = id;
+    const floors = new Array(TOTAL_FLOORS);
+    const small_cars = new Array(SMALL_CAR_SIZE);
+    const medium_cars = new Array(MEDIUM_CAR_SIZE);
+    const large_cars = new Array(LARGE_CAR_SIZE);
+    const xl_cars = new Array(XL_CAR_SIZE);
+    _.forEach(floors, (f, fi) => {
+      _.forEach(small_cars, (s, si) => {
+        parkingLots.push(
+          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.small),
+        );
+      });
+      _.forEach(medium_cars, (s, si) => {
+        parkingLots.push(
+          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.medium),
+        );
+      });
+      _.forEach(large_cars, (s, si) => {
+        parkingLots.push(
+          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.large),
+        );
+      });
+      _.forEach(xl_cars, (s, si) => {
+        parkingLots.push(generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.xl));
+      });
+    });
+    store.parkingSlots = parkingLots;
+    await this.storeModel.create(store);
+    return {
+      data: {
+        storeId: id,
+        name: store.name,
+      },
+    };
   }
 
-  findAll() {
-    return this.storeModel.find().exec();
+  async findAll() {
+    const data = await this.storeModel
+      .find()
+      .select(['name', 'storeId'])
+      .exec();
+    return {
+      data: data,
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} store`;
+  async findOne(id: string) {
+    const data = await this.storeModel
+      .findOne({ storeId: id })
+      .select(['name', 'storeId'])
+      .exec();
+    return {
+      data: data,
+    };
   }
 
-  update(id: number, updateStoreDto: UpdateStoreDto) {
-    return `This action updates a #${id} store`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} store`;
+  async remove(id: string) {
+    const data = await this.storeModel
+      .findOneAndDelete({ storeId: id })
+      .select(['name', 'storeId'])
+      .exec();
+    if (_.isEmpty(data)) {
+      throw new BadRequestException('Store id not found');
+    }
+    return {
+      data: data,
+    };
   }
 }
