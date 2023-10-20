@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Patch, Param } from '@nestjs/common';
+import { Controller, Post, Body, Param, Put } from '@nestjs/common';
 import { ParkingService } from './parking.service';
 import { AllocateParkingDto } from './dto/allocate-parking.dto';
 
@@ -14,7 +14,7 @@ export class ParkingController {
     return this.parkingService.allocateParkingSlot(storeId, allocateParkingDto);
   }
 
-  @Patch(':storeId/:slotId')
+  @Put(':storeId/:slotId')
   update(@Param('storeId') storeId: string, @Param('slotId') slotId: string) {
     return this.parkingService.releaseParkingSlot(storeId, slotId);
   }

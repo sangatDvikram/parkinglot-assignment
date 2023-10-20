@@ -1,7 +1,30 @@
+import 'dart:convert';
+import 'dart:core';
+import 'dart:developer';
+import 'package:client/pages/parkingAllotmentScreen.dart';
+import 'package:client/pages/parkingSceen.dart';
+import 'package:client/pages/releaseParkingAllotmentSceen.dart';
+import 'package:client/pages/storeSelectionSceen.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'package:lodash_flutter/lodash_flutter.dart';
 
 void main() {
   runApp(const MyApp());
+}
+
+class Store {
+  final List<dynamic> data;
+
+  const Store({
+    required this.data,
+  });
+
+  factory Store.fromJson(Map<String, dynamic> json) {
+    return Store(
+      data: json['data'],
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -12,6 +35,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      routes: {
+        '/store': (context) => StoreSelectionScreen(),
+        '/parking': (context) => ParkingScreen(),
+        '/parking_allotment': (context) => ParkingAllotmentScreen(),
+        '/parking_release': (context) => ReleaseParkingAllotmentScreen(),
+      },
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -31,7 +60,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Parking lot allotment system'),
     );
   }
 }
@@ -56,6 +85,13 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  List<DropdownMenuItem<dynamic>> storeNames = [];
+  String selectedStore = '';
+  @override
+  void initState() {
+    super.initState();
+    _getStoreNames();
+  }
 
   void _incrementCounter() {
     setState(() {
@@ -66,6 +102,43 @@ class _MyHomePageState extends State<MyHomePage> {
       // called again, and so nothing would appear to happen.
       _counter++;
     });
+  }
+
+  void _getStoreNames() async {
+    var response = await get(Uri.http('localhost:3000', 'store'));
+    List<DropdownMenuItem<dynamic>> storeNamesLocal = [];
+
+    var json = jsonDecode(response.body);
+    log(json.toString());
+    var store = Store.fromJson(json);
+    var firstElement = LodashFlutter.first(store.data);
+    store.data.forEach((element) {
+      storeNamesLocal.add(DropdownMenuItem(
+        child: Text(element['name']),
+        value: element['storeId'],
+      ));
+    });
+    setState(() {
+      selectedStore = firstElement['storeId'];
+      storeNames = storeNamesLocal;
+    });
+  }
+
+  void _dropDownSelected(dynamic? selectedValue) {
+    log(selectedValue.toString());
+    if (selectedValue is String) {
+      setState(() {
+        selectedStore = selectedValue;
+      });
+    }
+  }
+  void _moveToParkingScreen() {
+    const routeName = '/parking';
+    Navigator.pushNamed(
+      context,
+      routeName,
+      arguments: selectedStore,
+    );
   }
 
   @override
@@ -106,19 +179,20 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             const Text(
-              'You have pushed the button this many times:',
+              'Select available Store',
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            DropdownButton(
+              items: storeNames,
+              onChanged: _dropDownSelected,
+              value: selectedStore,
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        onPressed: _moveToParkingScreen,
+        tooltip: 'Start Parking allotment',
+        child: const Icon(Icons.arrow_forward),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
