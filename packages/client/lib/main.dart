@@ -105,9 +105,13 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _getStoreNames() async {
-    var response = await get(Uri.http('localhost:3000', 'store'));
+    var response = await get(Uri.http('10.0.2.2:3000', 'store'));
     List<DropdownMenuItem<dynamic>> storeNamesLocal = [];
-
+    if (response.statusCode == 200) {
+      print(response.body);
+    } else {
+      print('A network error occurred');
+    }
     var json = jsonDecode(response.body);
     log(json.toString());
     var store = Store.fromJson(json);
@@ -183,6 +187,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             DropdownButton(
               items: storeNames,
+              hint: const Text('Select store'),
               onChanged: _dropDownSelected,
               value: selectedStore,
             ),

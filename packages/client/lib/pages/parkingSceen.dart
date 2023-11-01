@@ -49,7 +49,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
     try {
       var response = await post(
           Uri.http(
-              'localhost:3000', 'parking/$selectedStore/allocate-parking-slot'),
+              '10.0.2.2:3000', 'parking/$selectedStore/allocate-parking-slot'),
           body: {"carNumber": carNumberController.text, "size": selectedSize});
       var json = jsonDecode(response.body);
       var slot = ParkingSlot.fromJson(json);
@@ -74,7 +74,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
       String slotID = slotIdController.text;
       var response = await put(
           Uri.http(
-              'localhost:3000', 'parking/$selectedStore/$slotID'),
+              '10.0.2.2:3000', 'parking/$selectedStore/$slotID'),
           );
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,7 +164,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                   SizedBox(
                     height: 16,
                   ),
-                  Text('Allocated Slot : $allocatedSlot')
+                  SelectableText('Allocated Slot : $allocatedSlot')
                 ],
               ),
             ),
