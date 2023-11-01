@@ -20,9 +20,11 @@ export class StoreService {
 
   async create(createStoreDto: CreateStoreDto) {
     const id = nanoid.nanoid();
-    const parkingLots = [];
-    const store = createStoreDto;
-    store.storeId = id;
+    const store: Partial<Store> = {
+      name: createStoreDto.name,
+      storeId: id,
+      parkingSlots: [],
+    };
     const floors = new Array(TOTAL_FLOORS);
     const small_cars = new Array(SMALL_CAR_SIZE);
     const medium_cars = new Array(MEDIUM_CAR_SIZE);
@@ -30,25 +32,26 @@ export class StoreService {
     const xl_cars = new Array(XL_CAR_SIZE);
     _.forEach(floors, (f, fi) => {
       _.forEach(small_cars, (s, si) => {
-        parkingLots.push(
+        store.parkingSlots.push(
           generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.small),
         );
       });
       _.forEach(medium_cars, (s, si) => {
-        parkingLots.push(
+        store.parkingSlots.push(
           generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.medium),
         );
       });
       _.forEach(large_cars, (s, si) => {
-        parkingLots.push(
+        store.parkingSlots.push(
           generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.large),
         );
       });
       _.forEach(xl_cars, (s, si) => {
-        parkingLots.push(generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.xl));
+        store.parkingSlots.push(
+          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.xl),
+        );
       });
     });
-    store.parkingSlots = parkingLots;
     await this.storeModel.create(store);
     return {
       data: {

@@ -1,7 +1,6 @@
-import { ParkingLot } from 'src/parking/interfaces/parking.interface';
+import { IsNotEmpty } from 'class-validator';
 
 export class CreateStoreDto {
+  @IsNotEmpty()
   readonly name: string;
-  storeId: string;
-  parkingSlots: Array<ParkingLot>;
 }

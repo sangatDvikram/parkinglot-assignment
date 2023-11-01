@@ -12,7 +12,7 @@ export enum MODELS {
 
 export const TOTAL_FLOORS = 3;
 
-export const SMALL_CAR_SIZE = 2;
-export const MEDIUM_CAR_SIZE = 2;
-export const LARGE_CAR_SIZE = 2;
-export const XL_CAR_SIZE = 2;
+export const SMALL_CAR_SIZE = 100;
+export const MEDIUM_CAR_SIZE = 100;
+export const LARGE_CAR_SIZE = 100;
+export const XL_CAR_SIZE = 100;
