@@ -1,10 +1,7 @@
 import 'dart:convert';
 import 'dart:core';
 import 'dart:developer';
-import 'package:client/pages/parkingAllotmentScreen.dart';
-import 'package:client/pages/parkingSceen.dart';
-import 'package:client/pages/releaseParkingAllotmentSceen.dart';
-import 'package:client/pages/storeSelectionSceen.dart';
+import 'package:client/pages/parking_sceen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:lodash_flutter/lodash_flutter.dart';
@@ -34,12 +31,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Parking Application',
       routes: {
-        '/store': (context) => StoreSelectionScreen(),
-        '/parking': (context) => ParkingScreen(),
-        '/parking_allotment': (context) => ParkingAllotmentScreen(),
-        '/parking_release': (context) => ReleaseParkingAllotmentScreen(),
+        '/parking': (context) => const ParkingScreen(),
       },
       theme: ThemeData(
         // This is the theme of your application.
@@ -84,48 +78,39 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
   List<DropdownMenuItem<dynamic>> storeNames = [];
   String selectedStore = '';
   @override
   void initState() {
     super.initState();
-    _getStoreNames();
+    _getStoreNames(context);
   }
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  void _getStoreNames() async {
+  void _getStoreNames(BuildContext context) async {
     var response = await get(Uri.http('10.0.2.2:3000', 'store'));
     List<DropdownMenuItem<dynamic>> storeNamesLocal = [];
+    if (!context.mounted) return;
     if (response.statusCode == 200) {
-      print(response.body);
+      var json = jsonDecode(response.body);
+      log(json.toString());
+      var store = Store.fromJson(json);
+      var firstElement = LodashFlutter.first(store.data);
+      for (var element in store.data) {
+        storeNamesLocal.add(DropdownMenuItem(
+          value: element['storeId'],
+          child: Text(element['name']),
+        ));
+      }
+
+      setState(() {
+        selectedStore = firstElement['storeId'];
+        storeNames = storeNamesLocal;
+      });
     } else {
-      print('A network error occurred');
+      log(response.body.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Getting store details failed")));
     }
-    var json = jsonDecode(response.body);
-    log(json.toString());
-    var store = Store.fromJson(json);
-    var firstElement = LodashFlutter.first(store.data);
-    store.data.forEach((element) {
-      storeNamesLocal.add(DropdownMenuItem(
-        child: Text(element['name']),
-        value: element['storeId'],
-      ));
-    });
-    setState(() {
-      selectedStore = firstElement['storeId'];
-      storeNames = storeNamesLocal;
-    });
   }
 
   void _dropDownSelected(dynamic? selectedValue) {
@@ -136,6 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
+
   void _moveToParkingScreen() {
     const routeName = '/parking';
     Navigator.pushNamed(

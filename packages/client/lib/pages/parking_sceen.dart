@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:client/utils/car_number.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 
@@ -26,12 +27,13 @@ class ParkingScreen extends StatefulWidget {
 }
 
 class _ParkingScreenState extends State<ParkingScreen> {
-  final carNumberController = TextEditingController(text: 'TN 75 AA 7106');
-  final slotIdController = TextEditingController(text: 'Slot1');
+  final carNumberController = TextEditingController(text: generateCarNumber());
+  final slotIdController = TextEditingController(text: '');
   var selectedSize = 'SMALL';
   var allocatedSlot = '';
   var allocating = false;
   var releasing = false;
+
   void _dropDownSelected(dynamic? selectedValue) {
     log(selectedValue.toString());
     if (selectedValue is String) {
@@ -51,12 +53,25 @@ class _ParkingScreenState extends State<ParkingScreen> {
           Uri.http(
               '10.0.2.2:3000', 'parking/$selectedStore/allocate-parking-slot'),
           body: {"carNumber": carNumberController.text, "size": selectedSize});
-      var json = jsonDecode(response.body);
-      var slot = ParkingSlot.fromJson(json);
-      setState(() {
-        allocatedSlot = slot.slot;
-        allocating = false;
-      });
+      if (response.statusCode == 201) {
+        var json = jsonDecode(response.body);
+        var slot = ParkingSlot.fromJson(json);
+        setState(() {
+          allocatedSlot = slot.slot;
+          allocating = false;
+        });
+        carNumberController.text = generateCarNumber();
+        slotIdController.text = slot.slot;
+      } else {
+        log(response.statusCode.toString());
+        log(response.body.toString());
+        setState(() {
+          allocating = false;
+        });
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Slot assignment failed')));
+      }
     } catch (e) {
       log(e.toString());
       setState(() {
@@ -73,12 +88,17 @@ class _ParkingScreenState extends State<ParkingScreen> {
     try {
       String slotID = slotIdController.text;
       var response = await put(
-          Uri.http(
-              '10.0.2.2:3000', 'parking/$selectedStore/$slotID'),
-          );
+        Uri.http('10.0.2.2:3000', 'parking/$selectedStore/$slotID'),
+      );
       if (response.statusCode == 200) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Slot released successfully')));
+            const SnackBar(content: Text('Slot released successfully')));
+      } else {
+        if (!context.mounted) return;
+        log(response.body.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Slot released failed')));
       }
       setState(() {
         releasing = false;
@@ -103,7 +123,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text('Perform Action'),
+        title: const Text('Perform Action'),
       ),
       body: Center(
         child: ListView(
@@ -119,33 +139,33 @@ class _ParkingScreenState extends State<ParkingScreen> {
                       labelText: 'Enter Car Number',
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 16,
                   ),
                   DropdownButton(
                     items: const [
                       DropdownMenuItem(
-                        child: Text('Small'),
                         value: 'SMALL',
+                        child: Text('Small'),
                       ),
                       DropdownMenuItem(
-                        child: Text('Medium'),
                         value: 'MEDIUM',
+                        child: Text('Medium'),
                       ),
                       DropdownMenuItem(
-                        child: Text('Large'),
                         value: 'LARGE',
+                        child: Text('Large'),
                       ),
                       DropdownMenuItem(
-                        child: Text('XL'),
                         value: 'XL',
+                        child: Text('XL'),
                       )
                     ],
                     onChanged: _dropDownSelected,
                     value: selectedSize,
                     isExpanded: true,
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 16,
                   ),
                   ElevatedButton.icon(
@@ -160,8 +180,8 @@ class _ParkingScreenState extends State<ParkingScreen> {
                               ),
                             )
                           : const Icon(Icons.drive_eta),
-                      label: Text('Allocate Parking slot')),
-                  SizedBox(
+                      label: const Text('Allocate Parking slot')),
+                  const SizedBox(
                     height: 16,
                   ),
                   SelectableText('Allocated Slot : $allocatedSlot')
@@ -178,7 +198,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                         border: UnderlineInputBorder(),
                         labelText: 'Enter Slot ID',
                       )),
-                  SizedBox(
+                  const SizedBox(
                     height: 16,
                   ),
                   ElevatedButton.icon(
@@ -193,7 +213,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                               ),
                             )
                           : const Icon(Icons.drive_eta),
-                      label: Text('Release Parking slot')),
+                      label: const Text('Release Parking slot')),
                 ],
               ),
             )
