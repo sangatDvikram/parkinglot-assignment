@@ -1,4 +1,4 @@
-import { PARKING_SLOT_SIZE } from 'src/constants';
+import { PARKING_SLOT_SIZE } from '../../constants';
 
 export interface ParkingLot {
   _id?: string;

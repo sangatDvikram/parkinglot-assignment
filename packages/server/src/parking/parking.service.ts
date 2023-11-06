@@ -1,9 +1,9 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { AllocateParkingDto } from './dto/allocate-parking.dto';
 import { Model } from 'mongoose';
-import { Store } from 'src/store/interfaces/store.interface';
+import { Store } from '../store/interfaces/store.interface';
 import { isEmpty, find } from 'lodash';
-import { PARKING_SLOT_SIZE } from 'src/constants';
+import { PARKING_SLOT_SIZE } from '../constants';
 
 @Injectable()
 export class ParkingService {
@@ -19,6 +19,17 @@ export class ParkingService {
       .exec();
     if (isEmpty(storeDetails)) {
       throw new BadRequestException('Store not found');
+    }
+
+    const carNumberAllocated = await this.storeModel.findOne({
+      _id: storeDetails.id,
+      parkingSlots: {
+        $elemMatch: { carNumber: allocateParkingDto.carNumber },
+      },
+    });
+
+    if (!isEmpty(carNumberAllocated)) {
+      throw new BadRequestException('Car is Already allocated');
     }
     const availableSlot = await this.findAllocatedSlots(
       storeId,
@@ -45,11 +56,16 @@ export class ParkingService {
 
   async releaseParkingSlot(storeId: string, slotId: string) {
     const storeDetails = await this.storeModel
-      .findOne({ storeId: storeId })
+      .findOne({
+        storeId: storeId,
+        parkingSlots: {
+          $elemMatch: { slotId: slotId, isAllocated: true },
+        },
+      })
       .select(['storeId', 'parkingSlots'])
       .exec();
     if (isEmpty(storeDetails)) {
-      throw new BadRequestException('Store not found');
+      throw new BadRequestException('Store/Slot not found');
     }
     const currentSlot = find(storeDetails.parkingSlots, {
       slotId: slotId,

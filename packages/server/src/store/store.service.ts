@@ -11,7 +11,7 @@ import {
   SMALL_CAR_SIZE,
   TOTAL_FLOORS,
   XL_CAR_SIZE,
-} from 'src/constants';
+} from '../constants';
 import { generateParkingLot } from './store.utils';
 
 @Injectable()
@@ -20,8 +20,16 @@ export class StoreService {
 
   async create(createStoreDto: CreateStoreDto) {
     const id = nanoid.nanoid();
+    const { name } = createStoreDto;
+    // Check if name exists
+    const existingStore = await this.storeModel.findOne({ name }).exec();
+    if (!_.isEmpty(existingStore)) {
+      throw new BadRequestException('Store name already exists.');
+    }
+
+    // Start Processing
     const store: Partial<Store> = {
-      name: createStoreDto.name,
+      name,
       storeId: id,
       parkingSlots: [],
     };
@@ -64,7 +72,7 @@ export class StoreService {
   async findAll() {
     const data = await this.storeModel
       .find()
-      .select(['name', 'storeId'])
+      .select(['-_id', 'name', 'storeId'])
       .exec();
     return {
       data: data,

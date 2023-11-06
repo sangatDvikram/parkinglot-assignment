@@ -1,5 +1,5 @@
 import { Mongoose } from 'mongoose';
-import { StoreSchema } from 'src/store/schemas/store.schema';
+import { StoreSchema } from '../store/schemas/store.schema';
 
 export const parkingProviders = [
   {

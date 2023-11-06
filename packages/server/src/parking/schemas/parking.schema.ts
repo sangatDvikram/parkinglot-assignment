@@ -4,6 +4,6 @@ export const ParkingLotSchema = new mongoose.Schema({
   slotId: { type: String, unique: true },
   floor: String,
   slotType: { type: String, index: true },
-  carNumber: String,
-  isAllocated: Boolean,
+  carNumber: { type: String, index: true },
+  isAllocated: { type: Boolean, index: true },
 });

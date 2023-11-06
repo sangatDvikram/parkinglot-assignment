@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { ParkingLotSchema } from 'src/parking/schemas/parking.schema';
+import { ParkingLotSchema } from '../../parking/schemas/parking.schema';
 
 export const StoreSchema = new mongoose.Schema({
   name: { type: String, index: true },

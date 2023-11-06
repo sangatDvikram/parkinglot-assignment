@@ -1,5 +1,5 @@
-import { PARKING_SLOT_SIZE } from 'src/constants';
-import { ParkingLot } from 'src/parking/interfaces/parking.interface';
+import { PARKING_SLOT_SIZE } from '../constants';
+import { ParkingLot } from '../parking/interfaces/parking.interface';
 
 export const generateParkingLot = (
   storeId: string,
