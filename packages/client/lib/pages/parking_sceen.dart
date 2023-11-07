@@ -53,6 +53,8 @@ class _ParkingScreenState extends State<ParkingScreen> {
           Uri.http(
               '10.0.2.2:3000', 'parking/$selectedStore/allocate-parking-slot'),
           body: {"carNumber": carNumberController.text, "size": selectedSize});
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       if (response.statusCode == 201) {
         var json = jsonDecode(response.body);
         var slot = ParkingSlot.fromJson(json);
@@ -62,13 +64,14 @@ class _ParkingScreenState extends State<ParkingScreen> {
         });
         carNumberController.text = generateCarNumber();
         slotIdController.text = slot.slot;
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Slot assignment success')));
       } else {
         log(response.statusCode.toString());
         log(response.body.toString());
         setState(() {
           allocating = false;
         });
-        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Slot assignment failed')));
       }
@@ -90,12 +93,13 @@ class _ParkingScreenState extends State<ParkingScreen> {
       var response = await put(
         Uri.http('10.0.2.2:3000', 'parking/$selectedStore/$slotID'),
       );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       if (response.statusCode == 200) {
-        if (!context.mounted) return;
+        slotIdController.text = "";
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Slot released successfully')));
       } else {
-        if (!context.mounted) return;
         log(response.body.toString());
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Slot released failed')));

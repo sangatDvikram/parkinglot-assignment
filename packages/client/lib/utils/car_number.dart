@@ -5,12 +5,15 @@ String generateRandomString(int len) {
   const chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz';
   return List.generate(len, (index) => chars[r.nextInt(chars.length)]).join();
 }
-
+String generateRandomNumber(int len) {
+  var r = Random();
+  const chars = '0123456789';
+  return List.generate(len, (index) => chars[r.nextInt(chars.length)]).join();
+}
 String generateCarNumber() {
-  var rand = Random();
-  var firstLetter = generateRandomString(2);
-  var secondNumber = rand.nextInt(99);
-  var secondLetter = generateRandomString(3);
-  var lastNumber = rand.nextInt(9999);
-  return '$firstLetter - $secondNumber - $secondLetter - $lastNumber';
+  var firstLetter = generateRandomString(2).toUpperCase();
+  var secondNumber = generateRandomNumber(2);
+  var secondLetter = generateRandomString(2).toUpperCase();
+  var lastNumber = generateRandomNumber(4);
+  return '$firstLetter-$secondNumber-$secondLetter-$lastNumber';
 }

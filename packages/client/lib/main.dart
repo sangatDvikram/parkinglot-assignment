@@ -108,6 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     } else {
       log(response.body.toString());
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Getting store details failed")));
     }
