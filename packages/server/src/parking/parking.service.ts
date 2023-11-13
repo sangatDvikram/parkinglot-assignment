@@ -1,124 +1,128 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { AllocateParkingDto } from './dto/allocate-parking.dto';
 import { Model } from 'mongoose';
+import * as _ from 'lodash';
 import { Store } from '../store/interfaces/store.interface';
-import { isEmpty, find } from 'lodash';
-import { PARKING_SLOT_SIZE } from '../constants';
+import { isEmpty } from 'lodash';
+import {
+  LOG_ACTION_TYPE,
+  PARKING_LOT_ALLOTMENT_SEQUENCE,
+  PARKING_SLOT_SIZE,
+  PARKING_SLOT_SIZE_ALLOTMENT,
+} from '../constants';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
+import {
+  ParkingLotAllotment,
+  ParkingLotAllotmentDocument,
+  ParkingLotAllotmentLog,
+} from './schemas/parking.schema';
+import { Parking } from 'src/store/schemas/store.schema';
 
 @Injectable()
 export class ParkingService {
-  constructor(@Inject('STORE_MODEL') private storeModel: Model<Store>) {}
+  constructor(
+    @Inject('STORE_MODEL') private storeModel: Model<Store>,
+    @InjectConnection() private connection: Connection,
+    @InjectModel(Parking.name)
+    private parkingLot: Model<Parking>,
+    @InjectModel(ParkingLotAllotment.name)
+    private parkingLotAllotmentModel: Model<ParkingLotAllotment>,
+    @InjectModel(ParkingLotAllotmentLog.name)
+    private parkingLotAllotmentLogModel: Model<ParkingLotAllotmentLog>,
+  ) {}
 
   async allocateParkingSlot(
     storeId: string,
     allocateParkingDto: AllocateParkingDto,
   ) {
-    const storeDetails = await this.storeModel
-      .findOne({ storeId: storeId })
-      .select(['storeId'])
-      .exec();
-    if (isEmpty(storeDetails)) {
-      throw new BadRequestException('Store not found');
-    }
-
-    const carNumberAllocated = await this.storeModel.findOne({
-      _id: storeDetails.id,
-      parkingSlots: {
-        $elemMatch: { carNumber: allocateParkingDto.carNumber },
-      },
-    });
-
-    if (!isEmpty(carNumberAllocated)) {
-      throw new BadRequestException('Car is Already allocated');
-    }
-    const availableSlot = await this.findAllocatedSlots(
+    const availableSlot = await this.findAvailableSlot(
       storeId,
       allocateParkingDto.size,
     );
-    await this.storeModel
-      .findOneAndUpdate(
-        {
-          _id: storeDetails.id,
-          'parkingSlots._id': availableSlot._id,
-        },
-        {
-          $set: {
-            'parkingSlots.$.isAllocated': true,
-            'parkingSlots.$.carNumber': allocateParkingDto.carNumber,
-          },
-        },
-      )
-      .exec();
+    const parkingLot: Partial<ParkingLotAllotmentDocument> = {
+      parkingLotId: storeId,
+      slotID: availableSlot,
+      size: allocateParkingDto.size,
+      carNumber: allocateParkingDto.carNumber,
+      createdAt: Date.now(),
+    };
+    const parkingLotAllotment =
+      await this.parkingLotAllotmentModel.create(parkingLot);
+    await this.parkingLotAllotmentLogModel.create({
+      ...parkingLot,
+      action: LOG_ACTION_TYPE.allocatedSlot,
+    });
     return {
-      data: { slot: availableSlot.slotId },
+      data: { slot: parkingLotAllotment.slotID },
     };
   }
 
   async releaseParkingSlot(storeId: string, slotId: string) {
-    const storeDetails = await this.storeModel
-      .findOne({
-        storeId: storeId,
-        parkingSlots: {
-          $elemMatch: { slotId: slotId, isAllocated: true },
-        },
+    const allotmentDetails = await this.parkingLotAllotmentModel
+      .findOneAndDelete({
+        parkingLotId: storeId,
+        slotID: slotId,
       })
-      .select(['storeId', 'parkingSlots'])
+      .select('-_id')
       .exec();
-    if (isEmpty(storeDetails)) {
-      throw new BadRequestException('Store/Slot not found');
+    if (isEmpty(allotmentDetails)) {
+      throw new BadRequestException('Parking/Slot not found');
     }
-    const currentSlot = find(storeDetails.parkingSlots, {
-      slotId: slotId,
-      isAllocated: true,
+    const allotementSize = PARKING_SLOT_SIZE_ALLOTMENT[allotmentDetails.size];
+    await this.parkingLot.updateOne(
+      {
+        _id: allotmentDetails.parkingLotId,
+      },
+      {
+        $push: {
+          [allotementSize]: { $each: [allotmentDetails.slotID], $sort: 1 },
+        },
+      },
+    );
+    await this.parkingLotAllotmentLogModel.create({
+      size: allotmentDetails.size,
+      slotID: allotmentDetails.slotID,
+      parkingLotId: allotmentDetails.parkingLotId,
+      carNumber: allotmentDetails.carNumber,
+      action: LOG_ACTION_TYPE.deAllocatedSlot,
+      createdAt: Date.now(),
     });
-    if (isEmpty(currentSlot)) {
-      throw new BadRequestException('Slot is already free');
-    }
-    await this.storeModel
-      .findOneAndUpdate(
-        {
-          _id: storeDetails.id,
-          'parkingSlots._id': currentSlot._id,
-        },
-        {
-          $set: {
-            'parkingSlots.$.isAllocated': false,
-            'parkingSlots.$.carNumber': '',
-          },
-        },
-      )
-      .exec();
     return {
       data: 'success',
     };
   }
 
-  private async findAllocatedSlots(storeId: string, size: PARKING_SLOT_SIZE) {
-    const selectedStore = await this.storeModel
-      .findOne({
-        storeId: storeId,
-        'parkingSlots.isAllocated': false,
-        'parkingSlots.slotType': size,
-      })
-      .exec();
-    let availableSlot = find(selectedStore.parkingSlots, {
-      isAllocated: false,
-      slotType: size,
-    });
-    if (isEmpty(availableSlot) && size === PARKING_SLOT_SIZE.small) {
-      availableSlot = await this.findAllocatedSlots(
+  private async findAvailableSlot(storeId, size: PARKING_SLOT_SIZE) {
+    const allotementSize = PARKING_SLOT_SIZE_ALLOTMENT[size];
+    const currentSizeSequenceIndex = PARKING_LOT_ALLOTMENT_SEQUENCE.findIndex(
+      (seq) => seq === size,
+    );
+    const sequenceComparision = _.slice(
+      PARKING_LOT_ALLOTMENT_SEQUENCE,
+      currentSizeSequenceIndex + 1,
+      PARKING_LOT_ALLOTMENT_SEQUENCE.length,
+    );
+    const parking = await this.parkingLot
+      .findOneAndUpdate(
+        {
+          _id: storeId,
+        },
+        {
+          $pop: {
+            [allotementSize]: -1,
+          },
+        },
+      )
+      .select([`${allotementSize}`]);
+    const availableSlotList = _.get(parking, allotementSize, []);
+    let availableSlot = _.first<string>(availableSlotList);
+    if (_.isEmpty(availableSlotList) && _.isEmpty(sequenceComparision)) {
+      throw new BadRequestException('No Available Slot found');
+    } else if (_.isEmpty(availableSlotList)) {
+      availableSlot = await this.findAvailableSlot(
         storeId,
-        PARKING_SLOT_SIZE.medium,
-      );
-    } else if (isEmpty(availableSlot) && size === PARKING_SLOT_SIZE.medium) {
-      availableSlot = await this.findAllocatedSlots(
-        storeId,
-        PARKING_SLOT_SIZE.large,
-      );
-    } else if (isEmpty(availableSlot) && size === PARKING_SLOT_SIZE.large) {
-      availableSlot = await this.findAllocatedSlots(
-        storeId,
-        PARKING_SLOT_SIZE.xl,
+        _.first(sequenceComparision),
       );
     }
     return availableSlot;

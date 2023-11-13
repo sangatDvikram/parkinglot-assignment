@@ -97,13 +97,13 @@ class _MyHomePageState extends State<MyHomePage> {
       var firstElement = LodashFlutter.first(store.data);
       for (var element in store.data) {
         storeNamesLocal.add(DropdownMenuItem(
-          value: element['storeId'],
+          value: element['id'],
           child: Text(element['name']),
         ));
       }
 
       setState(() {
-        selectedStore = firstElement['storeId'];
+        selectedStore = firstElement['id'];
         storeNames = storeNamesLocal;
       });
     } else {

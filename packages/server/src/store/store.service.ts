@@ -1,104 +1,110 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { Model } from 'mongoose';
-import { Store } from './interfaces/store.interface';
-import * as nanoid from 'nanoid';
 import * as _ from 'lodash';
-import {
-  LARGE_CAR_SIZE,
-  MEDIUM_CAR_SIZE,
-  PARKING_SLOT_SIZE,
-  SMALL_CAR_SIZE,
-  TOTAL_FLOORS,
-  XL_CAR_SIZE,
-} from '../constants';
-import { generateParkingLot } from './store.utils';
+import { PARKING_SLOT_SIZE } from '../constants';
+import { InjectModel } from '@nestjs/mongoose';
+import { Parking, ParkingDocument } from './schemas/store.schema';
 
 @Injectable()
 export class StoreService {
-  constructor(@Inject('STORE_MODEL') private storeModel: Model<Store>) {}
+  constructor(
+    @InjectModel(Parking.name) private parkingModel: Model<Parking>,
+  ) {}
 
-  async create(createStoreDto: CreateStoreDto) {
-    const id = nanoid.nanoid();
-    const { name } = createStoreDto;
-    // Check if name exists
-    const existingStore = await this.storeModel.findOne({ name }).exec();
-    if (!_.isEmpty(existingStore)) {
-      throw new BadRequestException('Store name already exists.');
+  async registerStore(createStoreDto: CreateStoreDto) {
+    try {
+      const storeDetails = createStoreDto;
+      const availableMediumSlots = this.generateSlots(
+        storeDetails.totalFloor,
+        storeDetails.mediumSlotPerFloor,
+        PARKING_SLOT_SIZE.medium,
+      );
+      const availableLargeSlots = this.generateSlots(
+        storeDetails.totalFloor,
+        storeDetails.largeSlotPerFloor,
+        PARKING_SLOT_SIZE.large,
+      );
+      const availableXLSlots = this.generateSlots(
+        storeDetails.totalFloor,
+        storeDetails.xlSlotPerFloor,
+        PARKING_SLOT_SIZE.xl,
+      );
+      const availableSmallSlots = this.generateSlots(
+        storeDetails.totalFloor,
+        storeDetails.smallSlotPerFloor,
+        PARKING_SLOT_SIZE.small,
+      );
+      const parking: Partial<ParkingDocument> = {
+        ...storeDetails,
+        availableSmallSlots,
+        availableLargeSlots,
+        availableMediumSlots,
+        availableXLSlots,
+      };
+      const newParking = await this.parkingModel.create(parking);
+      return {
+        data: {
+          name: newParking.name,
+          id: newParking._id,
+        },
+      };
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(error.message);
     }
-
-    // Start Processing
-    const store: Partial<Store> = {
-      name,
-      storeId: id,
-      parkingSlots: [],
+  }
+  async findAll() {
+    const data = await this.parkingModel.find().select(['_id', 'name']).exec();
+    return {
+      data: _.map(data, (d) => ({
+        name: d.name,
+        id: d._id,
+      })),
     };
-    const floors = new Array(TOTAL_FLOORS);
-    const small_cars = new Array(SMALL_CAR_SIZE);
-    const medium_cars = new Array(MEDIUM_CAR_SIZE);
-    const large_cars = new Array(LARGE_CAR_SIZE);
-    const xl_cars = new Array(XL_CAR_SIZE);
-    _.forEach(floors, (f, fi) => {
-      _.forEach(small_cars, (s, si) => {
-        store.parkingSlots.push(
-          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.small),
-        );
-      });
-      _.forEach(medium_cars, (s, si) => {
-        store.parkingSlots.push(
-          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.medium),
-        );
-      });
-      _.forEach(large_cars, (s, si) => {
-        store.parkingSlots.push(
-          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.large),
-        );
-      });
-      _.forEach(xl_cars, (s, si) => {
-        store.parkingSlots.push(
-          generateParkingLot(id, fi, si, PARKING_SLOT_SIZE.xl),
-        );
+  }
+
+  private generateSlots = (
+    totalFloor,
+    slotsPerFloor,
+    slotType: PARKING_SLOT_SIZE,
+  ) => {
+    const listOfParkingSlots = [];
+    _.forEach(new Array(totalFloor), (floor, floorIndex) => {
+      _.forEach(new Array(slotsPerFloor), (slot, slotIndex) => {
+        const currentSlot = `${floorIndex + 1}-${slotType}${slotIndex + 1}`;
+        listOfParkingSlots.push(currentSlot);
       });
     });
-    await this.storeModel.create(store);
+    return listOfParkingSlots;
+  };
+
+  async findOne(id: string) {
+    const data = await this.parkingModel
+      .findOne({ _id: id })
+      .select(['name', '_id'])
+      .exec();
     return {
       data: {
-        storeId: id,
-        name: store.name,
+        name: data.name,
+        id: data._id,
       },
     };
   }
 
-  async findAll() {
-    const data = await this.storeModel
-      .find()
-      .select(['-_id', 'name', 'storeId'])
-      .exec();
-    return {
-      data: data,
-    };
-  }
-
-  async findOne(id: string) {
-    const data = await this.storeModel
-      .findOne({ storeId: id })
-      .select(['name', 'storeId'])
-      .exec();
-    return {
-      data: data,
-    };
-  }
-
   async remove(id: string) {
-    const data = await this.storeModel
-      .findOneAndDelete({ storeId: id })
-      .select(['name', 'storeId'])
+    const data = await this.parkingModel
+      .findOneAndDelete({ _id: id })
+      .select(['name', '_id'])
       .exec();
     if (_.isEmpty(data)) {
       throw new BadRequestException('Store id not found');
     }
     return {
-      data: data,
+      data: {
+        name: data.name,
+        id: data._id,
+      },
     };
   }
 }

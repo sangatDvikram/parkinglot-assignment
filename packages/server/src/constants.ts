@@ -5,14 +5,22 @@ export enum PARKING_SLOT_SIZE {
   large = 'LARGE',
   xl = 'XL',
 }
-export enum MODELS {
-  store = 'STORE_MODEL',
-  database = 'DATABASE_CONNECTION',
+
+export const PARKING_LOT_ALLOTMENT_SEQUENCE = [
+  PARKING_SLOT_SIZE.small,
+  PARKING_SLOT_SIZE.medium,
+  PARKING_SLOT_SIZE.large,
+  PARKING_SLOT_SIZE.xl,
+];
+
+export const PARKING_SLOT_SIZE_ALLOTMENT = {
+  [PARKING_SLOT_SIZE.small]: 'availableSmallSlots',
+  [PARKING_SLOT_SIZE.medium]: 'availableMediumSlots',
+  [PARKING_SLOT_SIZE.xl]: 'availableXLSlots',
+  [PARKING_SLOT_SIZE.large]: 'availableLargeSlots',
+};
+
+export enum LOG_ACTION_TYPE {
+  allocatedSlot = 'ALLOCATED_SLOT',
+  deAllocatedSlot = 'DEALLOCATED_SLOT',
 }
-
-export const TOTAL_FLOORS = 3;
-
-export const SMALL_CAR_SIZE = 100;
-export const MEDIUM_CAR_SIZE = 100;
-export const LARGE_CAR_SIZE = 100;
-export const XL_CAR_SIZE = 100;

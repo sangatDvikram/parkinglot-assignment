@@ -8,7 +8,7 @@ export class StoreController {
 
   @Post('')
   create(@Body() createStoreDto: CreateStoreDto) {
-    return this.storeService.create(createStoreDto);
+    return this.storeService.registerStore(createStoreDto);
   }
 
   @Get('')
