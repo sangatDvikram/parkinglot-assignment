@@ -1,8 +1,7 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { AllocateParkingDto } from './dto/allocate-parking.dto';
 import { Model } from 'mongoose';
 import * as _ from 'lodash';
-import { Store } from '../store/interfaces/store.interface';
 import { isEmpty } from 'lodash';
 import {
   LOG_ACTION_TYPE,
@@ -10,20 +9,17 @@ import {
   PARKING_SLOT_SIZE,
   PARKING_SLOT_SIZE_ALLOTMENT,
 } from '../constants';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 import {
   ParkingLotAllotment,
   ParkingLotAllotmentDocument,
   ParkingLotAllotmentLog,
 } from './schemas/parking.schema';
-import { Parking } from 'src/store/schemas/store.schema';
+import { Parking } from '../store/schemas/store.schema';
 
 @Injectable()
 export class ParkingService {
   constructor(
-    @Inject('STORE_MODEL') private storeModel: Model<Store>,
-    @InjectConnection() private connection: Connection,
     @InjectModel(Parking.name)
     private parkingLot: Model<Parking>,
     @InjectModel(ParkingLotAllotment.name)

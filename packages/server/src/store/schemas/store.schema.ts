@@ -1,13 +1,5 @@
-import * as mongoose from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { ParkingLotSchema } from '../../parking/schemas/parking.schema';
-
-export const StoreSchema = new mongoose.Schema({
-  name: { type: String, index: true },
-  storeId: { type: String, required: true, uniq: true },
-  parkingSlots: [ParkingLotSchema],
-});
 
 export type ParkingDocument = HydratedDocument<Parking>;
 

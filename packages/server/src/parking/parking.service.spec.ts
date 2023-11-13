@@ -3,18 +3,31 @@ import { ParkingService } from './parking.service';
 import { BadRequestException } from '@nestjs/common';
 import * as nanoid from 'nanoid';
 import * as _ from 'lodash';
-import { parkingProviders } from './parking.providers';
-import { DatabaseModule } from '../database/database.module';
 import { StoreService } from '../store/store.service';
-import { storeProviders } from '../store/store.providers';
 import { CreateStoreDto } from '../store/dto/create-store.dto';
 import { AllocateParkingDto } from './dto/allocate-parking.dto';
-import { PARKING_SLOT_SIZE } from '../constants';
+import { MONGO_CONNECTION_STRING, PARKING_SLOT_SIZE } from '../constants';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Parking, ParkingSchema } from '../store/schemas/store.schema';
+import {
+  ParkingLotAllotment,
+  ParkingLotAllotmentLog,
+  ParkingLotAllotmentLogSchema,
+  ParkingLotAllotmentSchema,
+} from './schemas/parking.schema';
+import mongoose from 'mongoose';
 
 describe('ParkingService', () => {
   let parkingService: ParkingService;
   let storeService: StoreService;
-  const storeDetails: CreateStoreDto = { name: `Store - ${nanoid.nanoid(5)}` };
+  const storeDetails: CreateStoreDto = {
+    name: `Store - ${nanoid.nanoid(5)}`,
+    totalFloor: 3,
+    largeSlotPerFloor: 2,
+    mediumSlotPerFloor: 2,
+    smallSlotPerFloor: 2,
+    xlSlotPerFloor: 2,
+  };
   let storeId = '';
   const allocatedSlots = {
     [PARKING_SLOT_SIZE.small]: '',
@@ -28,26 +41,50 @@ describe('ParkingService', () => {
   };
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ParkingService, ...parkingProviders],
-      imports: [DatabaseModule],
+      providers: [ParkingService],
+      imports: [
+        MongooseModule.forRoot(MONGO_CONNECTION_STRING),
+        MongooseModule.forFeature([
+          { name: Parking.name, schema: ParkingSchema },
+        ]),
+        MongooseModule.forFeature([
+          { name: ParkingLotAllotment.name, schema: ParkingLotAllotmentSchema },
+        ]),
+        MongooseModule.forFeature([
+          {
+            name: ParkingLotAllotmentLog.name,
+            schema: ParkingLotAllotmentLogSchema,
+          },
+        ]),
+      ],
     }).compile();
     parkingService = module.get<ParkingService>(ParkingService);
   });
 
   beforeAll(async () => {
     const storeModule: TestingModule = await Test.createTestingModule({
-      imports: [DatabaseModule],
-      providers: [StoreService, ...storeProviders],
+      imports: [
+        MongooseModule.forRoot(MONGO_CONNECTION_STRING),
+        MongooseModule.forFeature([
+          { name: Parking.name, schema: ParkingSchema },
+        ]),
+      ],
+      providers: [StoreService],
     }).compile();
     storeService = storeModule.get<StoreService>(StoreService);
-    const response = await storeService.create(storeDetails);
-    storeId = response.data.storeId;
+    const response = await storeService.registerStore(storeDetails);
+    storeId = response.data.id;
   });
 
   afterAll(async () => {
     const storeModule: TestingModule = await Test.createTestingModule({
-      imports: [DatabaseModule],
-      providers: [StoreService, ...storeProviders],
+      imports: [
+        MongooseModule.forRoot(MONGO_CONNECTION_STRING),
+        MongooseModule.forFeature([
+          { name: Parking.name, schema: ParkingSchema },
+        ]),
+      ],
+      providers: [StoreService],
     }).compile();
     storeService = storeModule.get<StoreService>(StoreService);
     await storeService.remove(storeId);
@@ -72,7 +109,7 @@ describe('ParkingService', () => {
 
   it('should be bad request for store id', async () => {
     const response = parkingService.allocateParkingSlot(
-      '123',
+      new mongoose.Types.ObjectId().toString(),
       parkingLotDetails,
     );
     await expect(response).rejects.toBeInstanceOf(BadRequestException);
@@ -110,17 +147,18 @@ describe('ParkingService', () => {
 
   it('should allocate medium slot to small vehical', async () => {
     const promises = [];
-    for (let index = 1; index < new Array(100).length; index++) {
+    for (let index = 1; index < new Array(9).length; index++) {
       promises.push(
         parkingService.allocateParkingSlot(storeId, {
           carNumber: nanoid.nanoid(5),
-          size: PARKING_SLOT_SIZE.medium,
+          size: PARKING_SLOT_SIZE.small,
         }),
       );
     }
     const slot = await Promise.all(promises);
+    console.log('slot', slot);
     const last = _.last(slot);
-    expect(last.data.slot).toContain(`${PARKING_SLOT_SIZE.medium}2`);
+    expect(last.data.slot).toContain(`${PARKING_SLOT_SIZE.medium}`);
   });
 
   it('should release all parking slot', async () => {

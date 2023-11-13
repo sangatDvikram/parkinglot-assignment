@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { LOG_ACTION_TYPE, PARKING_SLOT_SIZE } from 'src/constants';
+import { LOG_ACTION_TYPE, PARKING_SLOT_SIZE } from '../../constants';
 
 export const ParkingLotSchema = new mongoose.Schema({
   slotId: { type: String, unique: true },

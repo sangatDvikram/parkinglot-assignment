@@ -3,18 +3,32 @@ import { BadRequestException } from '@nestjs/common';
 import * as _ from 'lodash';
 import * as nanoid from 'nanoid';
 import { StoreService } from './store.service';
-import { DatabaseModule } from '../database/database.module';
-import { storeProviders } from './store.providers';
 import { CreateStoreDto } from './dto/create-store.dto';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Parking, ParkingSchema } from './schemas/store.schema';
+import { MONGO_CONNECTION_STRING } from '../constants';
+import mongoose from 'mongoose';
 
 describe('StoreService', () => {
   let service: StoreService;
-  const storeDetails: CreateStoreDto = { name: `Store - ${nanoid.nanoid(5)}` };
+  const storeDetails: CreateStoreDto = {
+    name: `Store - ${nanoid.nanoid(5)}`,
+    totalFloor: 3,
+    largeSlotPerFloor: 2,
+    mediumSlotPerFloor: 2,
+    smallSlotPerFloor: 2,
+    xlSlotPerFloor: 2,
+  };
   let storeId = '';
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [DatabaseModule],
-      providers: [StoreService, ...storeProviders],
+      imports: [
+        MongooseModule.forRoot(MONGO_CONNECTION_STRING),
+        MongooseModule.forFeature([
+          { name: Parking.name, schema: ParkingSchema },
+        ]),
+      ],
+      providers: [StoreService],
     }).compile();
 
     service = module.get<StoreService>(StoreService);
@@ -30,12 +44,12 @@ describe('StoreService', () => {
   });
 
   it('should create new store', async () => {
-    const response = await service.create(storeDetails);
+    const response = await service.registerStore(storeDetails);
     expect(response.data.name).toBe(storeDetails.name);
   });
 
   it('should be bad request for store name', async () => {
-    const response = service.create(storeDetails);
+    const response = service.registerStore(storeDetails);
     await expect(response).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -48,19 +62,19 @@ describe('StoreService', () => {
   it('should get list of stores by id', async () => {
     const stores = await service.findAll();
     const store = _.find(stores.data, (s) => s.name === storeDetails.name);
-    storeId = store.storeId;
-    const response = await service.findOne(store.storeId);
+    storeId = store.id;
+    const response = await service.findOne(store.id);
     expect(response.data.name).toBe(storeDetails.name);
   });
 
   it('should be bad request for store name', async () => {
-    const response = service.remove('123');
+    const response = service.remove(new mongoose.Types.ObjectId().toString());
     await expect(response).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('should delete created store', async () => {
     const response = await service.remove(storeId);
     expect(response.data.name).toBe(storeDetails.name);
-    expect(response.data.storeId).toBe(storeId);
+    expect(response.data.id).toBe(storeId);
   });
 });

@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ParkingService } from './parking.service';
 import { ParkingController } from './parking.controller';
-import { DatabaseModule } from '../database/database.module';
-import { parkingProviders } from './parking.providers';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Parking, ParkingSchema } from 'src/store/schemas/store.schema';
+import { Parking, ParkingSchema } from '../store/schemas/store.schema';
 import {
   ParkingLotAllotment,
   ParkingLotAllotmentLog,
@@ -14,7 +12,6 @@ import {
 
 @Module({
   imports: [
-    DatabaseModule,
     MongooseModule.forFeature([{ name: Parking.name, schema: ParkingSchema }]),
     MongooseModule.forFeature([
       { name: ParkingLotAllotment.name, schema: ParkingLotAllotmentSchema },
@@ -27,6 +24,6 @@ import {
     ]),
   ],
   controllers: [ParkingController],
-  providers: [ParkingService, ...parkingProviders],
+  providers: [ParkingService],
 })
 export class ParkingModule {}

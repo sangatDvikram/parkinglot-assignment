@@ -46,11 +46,10 @@ export class StoreService {
       return {
         data: {
           name: newParking.name,
-          id: newParking._id,
+          id: newParking._id.toString(),
         },
       };
     } catch (error) {
-      console.log(error);
       throw new BadRequestException(error.message);
     }
   }
@@ -59,7 +58,7 @@ export class StoreService {
     return {
       data: _.map(data, (d) => ({
         name: d.name,
-        id: d._id,
+        id: d._id.toString(),
       })),
     };
   }
@@ -103,7 +102,7 @@ export class StoreService {
     return {
       data: {
         name: data.name,
-        id: data._id,
+        id: data._id.toString(),
       },
     };
   }
