@@ -129,6 +129,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                     height: 16,
                   ),
                   DropdownButton(
+                    key: const ValueKey('sizeSelectionDropdown'),
                     items: const [
                       DropdownMenuItem(
                         value: 'SMALL',
@@ -156,6 +157,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                   ),
                   ElevatedButton.icon(
                       onPressed: _onAllocateParkingSlot,
+                      key: const ValueKey('parkingLotAllotmentButton'),
                       icon: allocating
                           ? Container(
                               width: 20,
@@ -170,7 +172,13 @@ class _ParkingScreenState extends State<ParkingScreen> {
                   const SizedBox(
                     height: 16,
                   ),
-                  SelectableText('Allocated Slot : $allocatedSlot')
+                  Row(
+                    children: [
+                      const Text('Allocated Slot :'),
+                      const SizedBox(width: 4,),
+                      SelectableText(allocatedSlot)
+                    ],
+                  )
                 ],
               ),
             ),
@@ -188,6 +196,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                     height: 16,
                   ),
                   ElevatedButton.icon(
+                      key: const ValueKey('parkingLotReleaseButton'),
                       onPressed: _onReleaseParkingSlot,
                       icon: releasing
                           ? Container(
