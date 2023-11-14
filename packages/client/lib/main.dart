@@ -2,27 +2,16 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:developer';
 import 'package:client/pages/parking_sceen.dart';
+import 'package:client/services/services.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
 import 'package:lodash_flutter/lodash_flutter.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
-class Store {
-  final List<dynamic> data;
 
-  const Store({
-    required this.data,
-  });
-
-  factory Store.fromJson(Map<String, dynamic> json) {
-    return Store(
-      data: json['data'],
-    );
-  }
-}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -87,27 +76,22 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _getStoreNames(BuildContext context) async {
-    var response = await get(Uri.http('10.0.2.2:3000', 'store'));
-    List<DropdownMenuItem<dynamic>> storeNamesLocal = [];
-    if (!context.mounted) return;
-    if (response.statusCode == 200) {
-      var json = jsonDecode(response.body);
-      log(json.toString());
-      var store = Store.fromJson(json);
-      var firstElement = LodashFlutter.first(store.data);
-      for (var element in store.data) {
+    try {
+      var listOfStores = await getStoreNames(http.Client());
+      List<DropdownMenuItem<dynamic>> storeNamesLocal = [];
+      var firstElement = LodashFlutter.first(listOfStores);
+      for (var element in listOfStores) {
         storeNamesLocal.add(DropdownMenuItem(
           value: element['id'],
           child: Text(element['name']),
         ));
       }
-
       setState(() {
         selectedStore = firstElement['id'];
         storeNames = storeNamesLocal;
       });
-    } else {
-      log(response.body.toString());
+    } on Exception catch (_) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Getting store details failed")));
@@ -170,10 +154,11 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             const Text(
-              'Select available Store',
+              'Select available Parking lot',
             ),
             DropdownButton(
               items: storeNames,
+              key: const ValueKey('parkingLotSelectDropdown'),
               hint: const Text('Select store'),
               onChanged: _dropDownSelected,
               value: selectedStore,
@@ -183,6 +168,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _moveToParkingScreen,
+        key: const ValueKey('parkingLotNavigationButton'),
         tooltip: 'Start Parking allotment',
         child: const Icon(Icons.arrow_forward),
       ), // This trailing comma makes auto-formatting nicer for build methods.
