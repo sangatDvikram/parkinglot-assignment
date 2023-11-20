@@ -87,6 +87,9 @@ class _ParkingScreenState extends State<ParkingScreen> {
       slotIdController.text = "";
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Slot released successfully')));
+      setState(() {
+        releasing = false;
+      });
     } catch (e) {
       log(e.toString());
       setState(() {
@@ -120,6 +123,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                 children: [
                   TextField(
                     controller: carNumberController,
+                    key: const ValueKey('carNumberTextField'),
                     decoration: const InputDecoration(
                       border: UnderlineInputBorder(),
                       labelText: 'Enter Car Number',
@@ -176,7 +180,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                     children: [
                       const Text('Allocated Slot :'),
                       const SizedBox(width: 4,),
-                      SelectableText(allocatedSlot)
+                      SelectableText(allocatedSlot,key: const ValueKey('allottedSlotText'),)
                     ],
                   )
                 ],
@@ -188,6 +192,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
                 children: [
                   TextField(
                       controller: slotIdController,
+                      key: const ValueKey('slotIdTextField'),
                       decoration: const InputDecoration(
                         border: UnderlineInputBorder(),
                         labelText: 'Enter Slot ID',

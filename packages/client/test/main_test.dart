@@ -27,7 +27,6 @@ void main() {
       await tester.tap(dropdown);
       await tester.pumpAndSettle();
 
-      // Verify that our counter has incremented.
       final dropdownItem = find.text('First item').last;
       await tester.tap(dropdownItem);
       await tester.pumpAndSettle();

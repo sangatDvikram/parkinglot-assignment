@@ -50,7 +50,7 @@ Future<ParkingSlot> allocateParking(
     http.Client client, String selectedStore, Map<String, dynamic> body) async {
   var response =
       await client.post(Uri.parse(ALLOCATE_PARKING(selectedStore)), body: body);
-  if (response.statusCode == 200) {
+  if (response.statusCode == 201) {
     var json = jsonDecode(response.body);
     log(json.toString());
     var slot = ParkingSlot.fromJson(json);
